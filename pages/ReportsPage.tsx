@@ -59,9 +59,23 @@ const ReportsPage: React.FC = () => {
             const data = bots.map((b: Bot) => [b.id, b.status, b.battery, b.tasksCompleted, b.location, b.currentTask || 'N/A']);
             const csv = generateCSV(headers, data);
             downloadData(csv, 'bot_efficiency_logs.csv');
-        } else {
-            // For PDF or other formats, we can show an alert as a placeholder
-            alert(`Download for this report type is not yet implemented.`);
+        } else if (reportId === 'demand_trends') {
+            const headers = ['Month', 'Profit (INR)', 'Cost (INR)'];
+            const data = reportData.map(d => [d.name, d.profit, d.cost]);
+            const csv = generateCSV(headers, data);
+            downloadData(csv, 'demand_trends.csv');
+        } else if (reportId === 'quarterly_financials') {
+            const headers = ['Metric', 'Value'];
+            const totalProfit = reportData.reduce((acc, curr) => acc + curr.profit, 0);
+            const totalCost = reportData.reduce((acc, curr) => acc + curr.cost, 0);
+            const data = [
+                ['Total Revenue', totalProfit + totalCost],
+                ['Total Cost', totalCost],
+                ['Net Profit', totalProfit],
+                ['Margin', ((totalProfit / (totalProfit + totalCost)) * 100).toFixed(2) + '%']
+            ];
+            const csv = generateCSV(headers, data);
+            downloadData(csv, 'quarterly_financials.csv');
         }
     };
 

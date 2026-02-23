@@ -62,6 +62,22 @@ const DashboardPage: React.FC = () => {
     return (
         <div className="space-y-6">
             <ScrollAnimator>
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold">Dashboard Overview</h2>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-neon-green/10 border border-neon-green/20">
+                            <div className="w-2 h-2 rounded-full bg-neon-green animate-pulse"></div>
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-neon-green">Live Sync Active</span>
+                        </div>
+                        <button 
+                            onClick={() => window.location.reload()} 
+                            className="p-2 rounded-lg bg-white/5 border border-white/20 hover:bg-white/10 transition-colors"
+                            title="Refresh Dashboard"
+                        >
+                            <TrendingUpIcon className="w-5 h-5 text-gray-400" />
+                        </button>
+                    </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <KpiCard title="Total Stock Value" value="₹10 Cr" icon={TagIcon} change="+5.2%" changeType="increase" />
                     <KpiCard title="Active Warehouse Bots" value={`${bots.filter(b => b.status === BotStatus.Active).length} / ${bots.length}`} icon={CpuIcon} />

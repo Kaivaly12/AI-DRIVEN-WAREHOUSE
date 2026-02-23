@@ -74,7 +74,23 @@ const DemandForecastPage: React.FC = () => {
                                     <span>Materials: <span className="text-red-400">▼ 3%</span></span>
                                 </div>
                             </div>
-                            <button className="w-full mt-4 px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/20 transition-colors">
+                            <button 
+                                onClick={() => {
+                                    const headers = ['Day', 'Predicted Demand', 'Historical Sales'];
+                                    const csvRows = [headers.join(',')];
+                                    DEMAND_FORECAST_DATA.forEach(d => {
+                                        csvRows.push(`${d.name},${Number(d.predicted).toFixed(2)},${Number(d.historical).toFixed(2)}`);
+                                    });
+                                    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                                    const link = document.createElement('a');
+                                    link.href = URL.createObjectURL(blob);
+                                    link.setAttribute('download', 'demand_forecast.csv');
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                }}
+                                className="w-full mt-4 px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/20 transition-colors"
+                            >
                                 Export Data (CSV)
                             </button>
                         </div>

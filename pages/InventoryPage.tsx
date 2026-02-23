@@ -11,7 +11,7 @@ import AIAnalystModal from '../components/inventory/AIAnalystModal';
 import { RobotIcon, UploadIcon } from '../components/icons/Icons';
 
 const InventoryPage: React.FC = () => {
-    const { products, setProducts } = useAppContext();
+    const { products, setProducts, isSynced } = useAppContext();
     const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
     const [isAIModalOpen, setIsAIModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -75,77 +75,45 @@ const InventoryPage: React.FC = () => {
         fileInputRef.current?.click();
     };
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const text = event.target?.result as string;
-                const rows = text.split(/\r?\n/).filter(row => row.trim() !== '');
-                
-                if (rows.length < 2) {
-                    throw new Error("The CSV file must contain a header row and at least one data row.");
-                }
+        const formData = new FormData();
+        formData.append('file', file);
 
-                // Simple CSV parser that handles basic commas (not quoted commas for now)
-                const headers = rows[0].split(',').map(h => h.trim().toLowerCase());
-                
-                // Map header indexes
-                const idx = {
-                    name: headers.indexOf('name') !== -1 ? headers.indexOf('name') : headers.indexOf('product'),
-                    category: headers.indexOf('category'),
-                    quantity: headers.indexOf('quantity') !== -1 ? headers.indexOf('quantity') : headers.indexOf('qty'),
-                    price: headers.indexOf('price') !== -1 ? headers.indexOf('price') : headers.indexOf('unit price'),
-                    supplier: headers.indexOf('supplier') !== -1 ? headers.indexOf('supplier') : headers.indexOf('vendor'),
-                    id: headers.indexOf('id') !== -1 ? headers.indexOf('id') : headers.indexOf('pid')
-                };
+        try {
+            const response = await fetch('/api/inventory/upload', {
+                method: 'POST',
+                body: formData,
+            });
 
-                const lastIdMatch = products[products.length - 1]?.id.match(/\d+/);
-                let currentMaxId = lastIdMatch ? parseInt(lastIdMatch[0], 10) : 0;
-
-                const newProducts: Product[] = rows.slice(1).map((row, index) => {
-                    const columns = row.split(',').map(col => col.trim());
-                    
-                    const name = columns[idx.name] || `Imported Item ${index + 1}`;
-                    const category = columns[idx.category] || 'Uncategorized';
-                    
-                    // Clean numeric strings (remove currency symbols and extra commas)
-                    const cleanNumeric = (val: string) => val.replace(/[^\d.]/g, '');
-                    const quantity = parseInt(cleanNumeric(columns[idx.quantity] || '0'), 10) || 0;
-                    const price = parseFloat(cleanNumeric(columns[idx.price] || '0')) || 0;
-                    const supplier = columns[idx.supplier] || 'Manual Import';
-
-                    currentMaxId++;
-                    const id = columns[idx.id] || `PID-${String(currentMaxId).padStart(3, '0')}`;
-                    
-                    return {
-                        id,
-                        name,
-                        category,
-                        quantity,
-                        price,
-                        supplier,
-                        status: getStatusFromQuantity(quantity),
-                        dateAdded: new Date().toISOString().split('T')[0],
-                    };
-                });
-
-                setProducts(prev => [...prev, ...newProducts]);
-                alert(`Successfully imported ${newProducts.length} items from CSV.`);
-            } catch (err: any) {
-                alert(`Error importing CSV: ${err.message}`);
-                console.error(err);
+            if (!response.ok) {
+                throw new Error('Failed to upload file');
             }
-        };
-        reader.readAsText(file);
-        e.target.value = '';
+
+            const result = await response.json();
+            alert(result.message);
+        } catch (err: any) {
+            alert(`Error uploading file: ${err.message}`);
+            console.error(err);
+        } finally {
+            e.target.value = '';
+        }
     };
 
     return (
         <div className="space-y-6">
              <ScrollAnimator>
+                <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">Inventory Overview</h3>
+                    <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${isSynced ? 'bg-neon-green shadow-neon-green' : 'bg-red-500 shadow-red-500'}`}></div>
+                        <span className="text-[10px] font-bold uppercase tracking-tighter text-gray-500">
+                            {isSynced ? 'Live Sync Active' : 'Sync Offline'}
+                        </span>
+                    </div>
+                </div>
                 <InventoryStats products={products} />
             </ScrollAnimator>
 
@@ -158,15 +126,28 @@ const InventoryPage: React.FC = () => {
                                 type="file"
                                 ref={fileInputRef}
                                 onChange={handleFileUpload}
-                                accept=".csv"
+                                accept=".xlsx, .xls, .csv"
                                 className="hidden"
                             />
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-neon-blue/5 border border-neon-blue/20 text-neon-blue text-xs font-bold">
+                                <div className="w-1.5 h-1.5 rounded-full bg-neon-blue animate-pulse"></div>
+                                SYNCING: inventory.xlsx
+                            </div>
+                            <button 
+                                onClick={() => window.location.href = '/api/download-template'} 
+                                className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-lg bg-neon-blue/10 text-neon-blue font-semibold border border-neon-blue/20 hover:bg-neon-blue/20 transition-colors"
+                                title="Download the Excel file currently being watched by the server"
+                            >
+                                <UploadIcon className="w-5 h-5 rotate-180" />
+                                Download Template
+                            </button>
                             <button 
                                 onClick={handleImportClick} 
                                 className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-lg bg-white/5 border border-white/20 text-gray-300 font-semibold hover:bg-white/10 hover:border-neon-blue/50 transition-all"
+                                title="Upload your modified Excel file to sync with the server"
                             >
                                 <UploadIcon className="w-5 h-5" />
-                                Import CSV
+                                Upload Excel
                             </button>
                            <button onClick={() => setIsAIModalOpen(true)} className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-lg bg-neon-green/10 text-neon-green font-semibold border border-neon-green/20 hover:bg-neon-green/20 transition-colors">
                                 <RobotIcon className="w-5 h-5" />
