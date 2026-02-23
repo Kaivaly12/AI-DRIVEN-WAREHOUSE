@@ -46,7 +46,8 @@ if (!fs.existsSync(EXCEL_FILE_PATH)) {
     ];
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
     XLSX.utils.book_append_sheet(wb, ws, "Inventory");
-    XLSX.writeFile(wb, EXCEL_FILE_PATH);
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    fs.writeFileSync(EXCEL_FILE_PATH, buffer);
     console.log('Sample Excel file created at:', EXCEL_FILE_PATH);
 }
 
@@ -90,7 +91,8 @@ async function startServer() {
     const readExcelData = () => {
         try {
             if (!fs.existsSync(EXCEL_FILE_PATH)) return [];
-            const workbook = XLSX.readFile(EXCEL_FILE_PATH);
+            const fileBuffer = fs.readFileSync(EXCEL_FILE_PATH);
+            const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
             const data = XLSX.utils.sheet_to_json(worksheet);
@@ -148,7 +150,8 @@ async function startServer() {
                 const wb = XLSX.utils.book_new();
                 const ws = XLSX.utils.json_to_sheet(data);
                 XLSX.utils.book_append_sheet(wb, ws, "Inventory");
-                XLSX.writeFile(wb, EXCEL_FILE_PATH);
+                const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+                fs.writeFileSync(EXCEL_FILE_PATH, buffer);
                 
                 console.log(`Simulated update: ${firstItem.name} quantity changed from ${oldQty} to ${newQty}`);
                 res.json({ message: 'Excel file updated successfully', newItem: firstItem });
